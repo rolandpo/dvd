@@ -75,7 +75,6 @@ contract SelfieChallenge is Test {
         pool.flashLoan(receiver, address(token), token.balanceOf(address(pool)), data);
 
         vm.warp(block.timestamp + 2 days);
-
         governance.executeAction(receiver.actionId());
 
         console.log("pool balance: ", token.balanceOf(address(pool)));
